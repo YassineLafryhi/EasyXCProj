@@ -26,7 +26,11 @@ class EasyXCProj {
         case MacCLI
     }
 
-    init() {}
+    init() {
+        let repositoryURL = "https://github.com/YassineLafryhi/EasyXCProj"
+        let destinationURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".excp")
+        cloneRepositoryIfNeeded(repositoryURL: repositoryURL, destinationURL: destinationURL)
+    }
 
     public func createNewProject(
         projectName: String,
@@ -44,7 +48,7 @@ class EasyXCProj {
         switch projectType {
         case .iOSApp:
             Utils.duplicateFolder(
-                atPath: NSHomeDirectory() + "/EasyXCProj/Templates/iOS/\(Constants.iOSProjectTemplateName)",
+                atPath: NSHomeDirectory() + "/.excp/Templates/iOS/\(Constants.iOSProjectTemplateName)",
                 toPath: projectPath)
             Utils.renameFolder(
                 atPath: "\(projectPath)/\(Constants.iOSProjectTemplateName).xcodeproj",
@@ -586,5 +590,40 @@ class EasyXCProj {
 
     func write() {
         try! project!.write(path: Path("\(projectPath!)/\(projectName!).xcodeproj"), override: true)
+    }
+    
+    private func cloneRepositoryIfNeeded(repositoryURL: String, destinationURL: URL) {
+        let fileManager = FileManager.default
+        
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            // print("Repository already cloned at \(destinationURL.path)")
+            return
+        }
+        
+        do {
+            try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true, attributes: nil)
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            process.arguments = ["clone", repositoryURL, destinationURL.path]
+            
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+            
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if !data.isEmpty {
+                if let output = String(data: data, encoding: .utf8) {
+                    print("git output: \(output)")
+                }
+            }
+            
+            // print("Repository cloned successfully.")
+        } catch {
+            print("Error: \(error)")
+        }
     }
 }
